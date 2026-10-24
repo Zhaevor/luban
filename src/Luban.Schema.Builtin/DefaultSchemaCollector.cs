@@ -65,15 +65,21 @@ public class DefaultSchemaCollector : SchemaCollectorBase
         {
             tasks.Add(Task.Run(() =>
             {
-                string fileName = table.InputFiles[0];
+                string fileName = ResolveTableSchemaFileName(table.InputFiles[0]);
                 IBeanSchemaLoader schemaLoader = SchemaManager.Ins.CreateBeanSchemaLoader(beanSchemaLoaderName);
-                string fullPath = $"{GenerationContext.GetInputDataPath()}/{fileName}";
-                RawBean bean = schemaLoader.Load(fullPath, table.ValueType, table);
+                RawBean bean = schemaLoader.Load(fileName, table.ValueType, table);
                 bean.Groups = new List<string>(table.Groups);
                 Add(bean);
             }));
         }
         Task.WaitAll(tasks.ToArray());
+    }
+
+    private static string ResolveTableSchemaFileName(string fileOrSheet)
+    {
+        var (relativeFile, sheetName) = FileUtil.SplitFileAndSheetName(FileUtil.Standardize(fileOrSheet));
+        string fullPath = FileUtil.Standardize(Path.GetFullPath(Path.Combine(GenerationContext.GetInputDataPath(), relativeFile)));
+        return string.IsNullOrEmpty(sheetName) ? fullPath : $"{sheetName}@{fullPath}";
     }
 
     private void LoadTablesFromTableImporter()
